@@ -1,0 +1,111 @@
+#!/usr/bin/env python
+
+import sys
+import math
+import json
+from aruco_msgs.msg import MarkerArray
+import rospy
+import tf2_ros
+from tf.transformations import quaternion_from_euler
+from geometry_msgs.msg import TransformStamped, Vector3
+import tf
+import tf2_geometry_msgs
+import numpy as np
+from pyquaternion import Quaternion
+
+
+broadcaster2 = tf2_ros.StaticTransformBroadcaster()
+broadcaster = tf2_ros.TransformBroadcaster()
+
+
+def transformation_matrix(trans):
+    mat = Quaternion(
+        trans.rotation.w,
+        trans.rotation.x,
+        trans.rotation.y,
+        trans.rotation.z)
+    mat = mat.transformation_matrix
+    mat[0][3] = trans.translation.x
+    mat[1][3] = trans.translation.y
+    mat[2][3] = trans.translation.z
+    print(mat)
+    return mat
+
+
+
+def transformation(mat):
+    q = Quaternion(matrix=mat)
+    trans = TransformStamped()
+    trans.transform.translation.x = mat[0][3]
+    trans.transform.translation.y = mat[1][3]
+    trans.transform.translation.z = mat[2][3]
+    trans.transform.rotation.x = q[1]
+    trans.transform.rotation.y = q[2]
+    trans.transform.rotation.z = q[3]
+    trans.transform.rotation.w = q[0]
+    return trans
+
+def multiply_transforms(trans1, trans2):
+    mat1 = transformation_matrix(trans1)
+    mat2 = transformation_matrix(trans2)
+    return transformation(np.dot(mat1, mat2))
+
+def transform(msg):
+    for marker in msg.markers:
+        tc2m = TransformStamped()
+        tc2m.header.stamp = rospy.Time.now()
+        marker = msg.markers[0]
+        tc2m.header.frame_id = 'cf1/camera_link'#
+        tc2m.child_frame_id = 'aruco/detected'+str(marker.id)
+        global id
+        id = marker.id
+        # global marker_is_detected
+        # marker_is_detected = True
+        tc2m.transform.translation.x = marker.pose.pose.position.x
+        tc2m.transform.translation.y = marker.pose.pose.position.y
+        tc2m.transform.translation.z = marker.pose.pose.position.z
+        tc2m.transform.rotation.x = marker.pose.pose.orientation.x
+        tc2m.transform.rotation.y = marker.pose.pose.orientation.y
+        tc2m.transform.rotation.z = marker.pose.pose.orientation.z
+        tc2m.transform.rotation.w = marker.pose.pose.orientation.w
+        broadcaster.sendTransform(tc2m)
+marker_is_detected = False
+def main():
+    rospy.init_node('localization')
+    rospy.Subscriber('/aruco/markers', MarkerArray, transform)
+    tfBuffer = tf2_ros.Buffer()
+    listener = tf2_ros.TransformListener(tfBuffer)
+    rate = rospy.Rate(20.0)
+    found = False
+    while not rospy.is_shutdown():
+        try:
+            markeratmap = 'aruco/marker' + str(id)
+            detectedmarker = 'aruco/detected' +str(id)
+            trans2 = tfBuffer.lookup_transform(detectedmarker,'cf1/odom',rospy.Time(0),rospy.Duration(0.1))
+            trans1 = tfBuffer.lookup_transform('map',markeratmap,rospy.Time(0),rospy.Duration(0.1))
+            trans = multiply_transforms(trans1.transform, trans2.transform)
+            t = trans
+            t.header.stamp = rospy.Time.now()
+            t.header.frame_id = 'map'
+            t.child_frame_id = 'cf1/odom'
+            br = tf2_ros.TransformBroadcaster()
+            br.sendTransform(t)
+            found = True
+            print('detecting marker')
+
+
+
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+            print('not detecting marker')
+            if found:
+                old_transform = trans
+                old_transform.header.stamp = rospy.Time.now()
+                old_transform.header.frame_id = 'map'
+                old_transform.child_frame_id = 'cf1/odom'
+                br = tf2_ros.TransformBroadcaster()
+                br.sendTransform(old_transform)
+
+            pass
+
+if __name__ == "__main__":
+    main()
