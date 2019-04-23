@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-#average the transform between map and odom when camera sees multiply markers(add previous transform)
+#average the transform between map and odom when camera sees multiply markers
 import sys
 import math
 import json
@@ -79,20 +79,15 @@ def main():
     listener = tf2_ros.TransformListener(tfBuffer)
     rate = rospy.Rate(20.0)
     found = False
-
-
     while not rospy.is_shutdown():
         try:
-            if found:
-                count = 1
-            else:
-                count = 0.000001
-                position_x = 0
-                position_y = 0
-                position_z = 0
-                trans_yaw = 0
-                trans_roll = 0
-                trans_pitch = 0
+            count = 0.000001
+            position_x = 0
+            position_y = 0
+            position_z = 0
+            trans_yaw = 0
+            trans_roll = 0
+            trans_pitch = 0
             if id_list:
                 for id in id_list:
                     markeratmap = 'aruco/marker' + str(id)
@@ -117,7 +112,6 @@ def main():
                 trans_yaw = trans_yaw/ count
                 trans_pitch = trans_pitch/count
                 trans_roll = trans_roll/count
-                # old_trans = [position_x,position_y,position_z,trans_yaw,trans_pitch,trans_roll]
                 (orientation_x, orientation_y, orientation_z, orientation_w) = quaternion_from_euler(math.radians(trans_roll),
                                                                                                      math.radians(trans_pitch),
                                                                                                      math.radians(trans_yaw))
