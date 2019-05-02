@@ -1,0 +1,32 @@
+<launch>
+
+    <arg name="markerSize"      default="0.197"/>    <!-- in m -->
+    <arg name="ref_frame"       default=""/>  <!-- leave empty and the pose will be published wrt param parent_name -->
+    <arg name="gui" default="false" />
+
+
+    <node pkg="aruco_ros" type="marker_publisher" name="aruco">
+        <remap from="/camera_info" to="/cf1/camera/camera_info" />
+        <remap from="/image" to="/cf1/camera/image_raw" />
+        <param name="image_is_rectified" value="false"/>
+        <param name="marker_size"        value="$(arg markerSize)"/>
+        <param name="reference_frame"    value="$(arg ref_frame)"/>   <!-- frame in which the marker pose will be refered -->
+        <param name="camera_frame"       value="cf1/camera_link"/>
+    </node>
+
+    <node pkg="image_view" type="image_view" name="aruco_image_view" if="$(arg gui)">
+        <remap from="image" to="/aruco/result" />
+    </node>
+    <node pkg="tf" type="static_transform_publisher" name="link1_broadcaster" args="0.01 0 0.02 -1.571 0 -1.571  cf1/base_link cf1/camera_link 100" />
+    <node pkg="certificate" type="markersatmap" name="markersatmap">
+    </node>
+    <!--node pkg="certificate" type="localization_average1" name="localization_average1"
+    </node-->
+    <node name="rviz" pkg="rviz" type="rviz" respawn="false" output="screen" args = "-d $(find dd2419_resources)/neil_rviz.rviz"/>
+
+
+    
+    
+
+</launch>
+
