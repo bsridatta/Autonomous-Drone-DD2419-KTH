@@ -110,9 +110,6 @@ def compute_avg_transform():
 
 
 def normalize(v):
-	"""
-	Normalize a vector in order to make its element sum up to 1.
-	# """
 	norm = np.linalg.norm(v)
 	if norm == 0 :
 		return v
