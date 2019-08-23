@@ -1,0 +1,16 @@
+airport
+curve_left
+curve_right
+follow_left
+follow_right
+junction
+no_bicycle
+no_heavy_truck
+co_parking
+no_stop_and_parking
+residential
+road_narrows_left
+road_narrows_right
+roundabout_warning
+stop
+background
